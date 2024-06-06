@@ -10,6 +10,10 @@ import pandas as pd
 from scipy.stats import norm
 from scipy import linalg
 from sklearn.decomposition import PCA
+from sklearn.model_selection import cross_val_score, KFold
+from sklearn.utils import check_X_y
+from sklearn.neighbors import KNeighborsClassifier
+
 
 def plot_Shepard(mds_model, plot=True):
     """Affiche le diagramme de Shepard et retourne un couple contenant les
@@ -423,3 +427,20 @@ def plot_clustering(data, clus1, clus2=None, ax=None, **kwargs):
             ax.add_artist(ell)
 
     return ax, pca
+
+
+def knn_cross_validation2(X, y, n_folds, n_neighbors_list):
+    # Vérifier et valider les entrées X et y
+    X, y = check_X_y(X, y)
+
+    # Initialiser le KFold
+    kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
+
+    # Générateur pour produire les scores de validation croisée pour chaque n_neighbors
+    for n_neighbors in n_neighbors_list:
+        # Initialiser le modèle KNeighborsClassifier
+        knn = KNeighborsClassifier(n_neighbors=n_neighbors)
+        # Calculer les scores de validation croisée
+        scores = cross_val_score(knn, X, y, cv=kf, scoring='accuracy')
+        # Renvoyer les scores pour la valeur actuelle de n_neighbors
+        yield n_neighbors, scores
