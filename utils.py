@@ -10,9 +10,10 @@ import pandas as pd
 from scipy.stats import norm
 from scipy import linalg
 from sklearn.decomposition import PCA
-from sklearn.model_selection import cross_val_score, KFold
+from sklearn.model_selection import cross_val_score, KFold, StratifiedKFold
 from sklearn.utils import check_X_y
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import recall_score, accuracy_score, classification_report
 
 
 def plot_Shepard(mds_model, plot=True):
@@ -434,7 +435,7 @@ def knn_cross_validation2(X, y, n_folds, n_neighbors_list):
     X, y = check_X_y(X, y)
 
     # Initialiser le KFold
-    kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
+    kf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
 
     # Générateur pour produire les scores de validation croisée pour chaque n_neighbors
     for n_neighbors in n_neighbors_list:
@@ -444,3 +445,72 @@ def knn_cross_validation2(X, y, n_folds, n_neighbors_list):
         scores = cross_val_score(knn, X, y, cv=kf, scoring='accuracy')
         # Renvoyer les scores pour la valeur actuelle de n_neighbors
         yield n_neighbors, scores
+
+
+def select_k_opt(X, y, n_folds, n_list):
+    kf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
+
+    results = {
+        'n_neighbors': [],
+        'score': []
+    }
+
+    best_k = None
+    best_score = -np.inf
+
+    for n_neighbors in n_list:
+        knn = KNeighborsClassifier(n_neighbors=n_neighbors)
+        scores = cross_val_score(knn, X, y, cv=kf, scoring='accuracy')
+        mean_score = np.mean(scores)
+
+        if mean_score > best_score:
+            best_score = mean_score
+            best_k = n_neighbors
+
+        for score in scores:
+            results['n_neighbors'].append(n_neighbors)
+            results['score'].append(score)
+
+    sns.lineplot(data=results, x='n_neighbors', y='score')
+    plt.show()
+    print(f"Best k: {best_k} with a score of: {best_score}")
+
+
+def evaluate_model(pipeline, model, X_train, y_train, X_test, y_test, n_folds=10, costs=None):
+    kf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
+
+    X_train_processed = pipeline.fit_transform(X_train, y_train)
+    recalls_path = []
+    accuracies = []
+
+    for train_index, val_index in kf.split(X_train_processed, y_train):
+        X_train_fold, X_val_fold = X_train_processed[train_index], X_train_processed[val_index]
+        y_train_fold, y_val_fold = y_train.iloc[train_index], y_train.iloc[val_index]
+
+        model.fit(X_train_fold, y_train_fold)
+        y_val_pred = model.predict(X_val_fold)
+
+        if costs is not None:
+            # TODO: ajouter le cas où on fait avec des coûts
+            pass
+        report = classification_report(y_val_fold, y_val_pred, output_dict=True)
+        recalls_path.append(report['3.0']['recall'])
+        accuracies.append(report['accuracy'])
+
+    X_test_processed = pipeline.transform(X_test)
+
+    model.fit(X_train_processed, y_train)
+
+    y_test_pred = model.predict(X_test_processed)
+
+    report_test = classification_report(y_test, y_test_pred, output_dict=True)
+    recall_test = report_test['3.0']['recall']
+    accuracy_test = report_test['accuracy']
+
+    return {
+        'recalls_path': recalls_path,
+        'accuracies': accuracies,
+        'recall_path_test': recall_test,
+        'accuracy_test': accuracy_test
+    }
+
