@@ -514,3 +514,63 @@ def evaluate_model(pipeline, model, X_train, y_train, X_test, y_test, n_folds=10
         'accuracy_test': accuracy_test
     }
 
+
+from collections import defaultdict
+
+def average_classification_reports(classification_reports):
+    # Initialisez un dictionnaire pour stocker les moyennes
+    average_report = {'1.0': {'precision': 0, 'recall': 0, 'f1-score': 0},
+                    '2.0': {'precision': 0, 'recall': 0, 'f1-score': 0},
+                    '3.0': {'precision': 0, 'recall': 0, 'f1-score': 0},
+                    'accuracy': 0,
+                    'macro avg': {'precision': 0, 'recall': 0, 'f1-score': 0},
+                    'weighted avg': {'precision': 0, 'recall': 0, 'f1-score': 0}}
+
+    # Calculez les sommes
+    for report in classification_reports:
+        for class_value, metrics in report.items():
+            if class_value == 'accuracy':
+                average_report['accuracy'] += metrics
+            elif class_value in ['macro avg', 'weighted avg']:
+                average_report[class_value]['precision'] += metrics['precision']
+                average_report[class_value]['recall'] += metrics['recall']
+                average_report[class_value]['f1-score'] += metrics['f1-score']
+            else:
+                average_report[class_value]['precision'] += metrics['precision']
+                average_report[class_value]['recall'] += metrics['recall']
+                average_report[class_value]['f1-score'] += metrics['f1-score']
+
+    # Calculez les moyennes
+    num_folds = len(classification_reports)
+    for class_value, metrics in average_report.items():
+        if class_value == 'accuracy':
+            average_report[class_value] /= num_folds
+        else:
+            average_report[class_value]['precision'] /= num_folds
+            average_report[class_value]['recall'] /= num_folds
+            average_report[class_value]['f1-score'] /= num_folds
+
+    return average_report
+
+
+def get_avg_report(pipeline, model, X_train, y_train, X_test, y_test, n_folds=10, costs=None):
+    kf = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
+
+    X_train_processed = pipeline.fit_transform(X_train, y_train)
+    reports = []
+
+    for train_index, val_index in kf.split(X_train_processed, y_train):
+        X_train_fold, X_val_fold = X_train_processed[train_index], X_train_processed[val_index]
+        y_train_fold, y_val_fold = y_train.iloc[train_index], y_train.iloc[val_index]
+
+        model.fit(X_train_fold, y_train_fold)
+        y_val_pred = model.predict(X_val_fold)
+
+        if costs is not None:
+            # TODO: ajouter le cas où on fait avec des coûts
+            pass
+        report = classification_report(y_val_fold, y_val_pred, output_dict=True)
+        reports.append(report)
+
+    average_report = average_classification_reports(reports)
+    return average_report
