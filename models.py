@@ -4,17 +4,17 @@ from sklearn.feature_selection import SelectKBest, f_classif
 
 
 pipelines = [
-    ("Données brutes", Pipeline([
+    ("B", Pipeline([
         ("Standardization", FunctionTransformer(validate=True))
     ])),
-    ("Données normalisées", Pipeline([
+    ("N", Pipeline([
         ("Standardization", StandardScaler())
     ])),
-    ("Données brutes avec SV", Pipeline([
+    ("BSV", Pipeline([
         ("Standardization", FunctionTransformer(validate=True)),
         ("FeatureSelection", SelectKBest(score_func=f_classif, k=6))
     ])),
-    ("Données normalisées avec SV", Pipeline([
+    ("NSV", Pipeline([
         ("Standardization", StandardScaler()),
         ("FeatureSelection", SelectKBest(score_func=f_classif, k=6))
     ]))
@@ -22,17 +22,17 @@ pipelines = [
 
 
 knn_models = [
-    ("Données brutes", Pipeline([
+    ("B", Pipeline([
         ("Standardization", FunctionTransformer(validate=True))
     ]), 7),
-    ("Données normalisées", Pipeline([
+    ("N", Pipeline([
         ("Standardization", StandardScaler())
     ]), 1),
-    ("Données brutes avec SV", Pipeline([
+    ("BSV", Pipeline([
         ("Standardization", FunctionTransformer(validate=True)),
         ("FeatureSelection", SelectKBest(score_func=f_classif, k=6))
     ]), 3),
-    ("Données normalisées avec SV", Pipeline([
+    ("NSV", Pipeline([
         ("Standardization", StandardScaler()),
         ("FeatureSelection", SelectKBest(score_func=f_classif, k=6))
     ]), 7)
