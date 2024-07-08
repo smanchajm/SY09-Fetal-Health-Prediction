@@ -33,6 +33,7 @@ The project is organized as follows:
 
 - `Notebooks/`: Jupyter notebooks for exploratory data analysis and model development
 - `Rapports/`: Project reports and visualizations
+- `Utils/`: Utils and models
 
 ## Results and Evaluation
 
